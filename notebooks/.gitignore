@@ -1,0 +1,12 @@
+# Ignore all generated pipeline outputs (directories)
+data/
+results/
+models/
+artifacts/
+
+# Ignore any stray generated files that land in notebooks/ root
+*.csv
+*.pkl
+*.h5
+*.json
+!*.ipynb.json
