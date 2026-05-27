@@ -118,9 +118,14 @@ def create_pollutant_interactions(df: pd.DataFrame) -> pd.DataFrame:
         df_feat["pm_total_lag1"] = df_feat["pm10_lag1"] + df_feat["pm2_5_lag1"]
 
     if "nitrogen_dioxide_lag1" in df_feat.columns and "ozone_lag1" in df_feat.columns:
-        df_feat["oxidant_load_lag1"] = df_feat["nitrogen_dioxide_lag1"] + df_feat["ozone_lag1"]
+        df_feat["oxidant_load_lag1"] = (
+            df_feat["nitrogen_dioxide_lag1"] + df_feat["ozone_lag1"]
+        )
 
-    if "carbon_monoxide_lag1" in df_feat.columns and "nitrogen_dioxide_lag1" in df_feat.columns:
+    if (
+        "carbon_monoxide_lag1" in df_feat.columns
+        and "nitrogen_dioxide_lag1" in df_feat.columns
+    ):
         df_feat["combustion_idx_lag1"] = df_feat["carbon_monoxide_lag1"] / (
             df_feat["nitrogen_dioxide_lag1"] + eps
         )
