@@ -122,7 +122,7 @@ def create_rolling_features(
 
 
 def create_pollutant_interactions(df: pd.DataFrame) -> pd.DataFrame:
-    """Creates physical and chemical interaction features between air pollutants based on previous hour's data (lag1) to prevent target leakage.
+    """Creates interaction features between pollutants using lag1 values to prevent target leakage.
 
     Args:
         df (pd.DataFrame): The input dataframe.

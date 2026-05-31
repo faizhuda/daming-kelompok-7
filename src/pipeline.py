@@ -79,6 +79,10 @@ def run_features(
     df_feat = create_rolling_features(df_feat, cols=pollutant_cols, config=config)
     df_feat = create_pollutant_interactions(df_feat)
 
+    # Drop rows with lag-NaN values (the first 24 hours per city) for consistency with notebook 03
+    lag24_cols = [c for c in df_feat.columns if c.endswith("_lag24")]
+    df_feat = df_feat.dropna(subset=lag24_cols).reset_index(drop=True)
+
     df_feat.to_csv(output_dir / "df_feat.csv", index=False)
     logger.info(
         "Feature data saved → %s/df_feat.csv (%d rows, %d cols)",
@@ -114,7 +118,8 @@ def main(argv=None):
                 )
                 sys.exit(1)
             df_clean = pd.read_csv(clean_path)
-            df_clean["datetime"] = pd.to_datetime(df_clean["datetime"])
+            datetime_col = config["data"]["datetime_col"]
+            df_clean[datetime_col] = pd.to_datetime(df_clean[datetime_col])
         run_features(df_clean, config, args.output_dir)
 
     logger.info("Pipeline complete.")

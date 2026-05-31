@@ -53,7 +53,9 @@ def evaluate_model(
     mae = mean_absolute_error(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     r2 = r2_score(y_true, y_pred)
-    mape = np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100
+    # MAPE: denominator uses actual y_true + small epsilon to avoid division-by-zero.
+    # For AQI data (range 9–300) this epsilon is negligible; standard MAPE semantics preserved.
+    mape = np.mean(np.abs((y_true - y_pred) / (np.abs(y_true) + 1e-8))) * 100
     result = {"Model": model_name, "MAE": mae, "RMSE": rmse, "R2": r2, "MAPE": mape}
     logger.info(
         "evaluate_model [%s] — MAE=%.4f RMSE=%.4f R2=%.4f",
