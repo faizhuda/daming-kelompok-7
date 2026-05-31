@@ -21,6 +21,7 @@ def winsorize_city(
     col: Union[str, List[str]],
     limits: List[float],
     city_id_col: str = "city_id",
+    copy: bool = True,
 ) -> pd.DataFrame:
     """Winsorizes specific column(s) per city to handle outliers by clipping extreme quantiles.
 
@@ -29,11 +30,14 @@ def winsorize_city(
         col (Union[str, List[str]]): Column name or list of column names to winsorize.
         limits (List[float]): A list of two floats representing the lower and upper quantile bounds.
         city_id_col (str, optional): The column name identifying cities. Defaults to "city_id".
+        copy (bool, optional): If True, copies df before modifying. Set to False when caller
+            already owns a copy to avoid redundant allocation. Defaults to True.
 
     Returns:
         pd.DataFrame: A new dataframe with the specified column(s) winsorized.
     """
-    df = df.copy()
+    if copy:
+        df = df.copy()
     cols = [col] if isinstance(col, str) else list(col)
 
     def winsorize_series(s: pd.Series) -> pd.Series:
@@ -119,7 +123,7 @@ def clean_data(
     if aqi_col in df_clean.columns:
         cols_to_winsorize.append(aqi_col)
     df_clean = winsorize_city(
-        df_clean, cols_to_winsorize, winsorize_limits, city_id_col
+        df_clean, cols_to_winsorize, winsorize_limits, city_id_col, copy=False
     )
 
     # 5. Drop carbon dioxide (>74% missing)
