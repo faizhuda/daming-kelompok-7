@@ -33,7 +33,7 @@ def create_sequences(
         )
     Xs, ys = [], []
     for i in range(len(X) - look_back):
-        Xs.append(X[i: i + look_back])
+        Xs.append(X[i : i + look_back])
         ys.append(y[i + look_back])
     return np.array(Xs), np.array(ys)
 

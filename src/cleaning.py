@@ -1,5 +1,11 @@
 import logging
-from typing import Any, Dict, List, Optional, Union  # noqa: F401 (Any used by clean_data)
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Union,
+)  # noqa: F401 (Any used by clean_data)
 
 import numpy as np
 import pandas as pd
@@ -112,7 +118,9 @@ def clean_data(
     cols_to_winsorize = [c for c in pollutant_cols if c in df_clean.columns]
     if aqi_col in df_clean.columns:
         cols_to_winsorize.append(aqi_col)
-    df_clean = winsorize_city(df_clean, cols_to_winsorize, winsorize_limits, city_id_col)
+    df_clean = winsorize_city(
+        df_clean, cols_to_winsorize, winsorize_limits, city_id_col
+    )
 
     # 5. Drop carbon dioxide (>74% missing)
     if carbon_dioxide_col in df_clean.columns:
