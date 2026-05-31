@@ -28,6 +28,21 @@ def test_create_sequences_look_back_one():
     assert ys.shape == (9,)
 
 
+def test_create_sequences_raises_when_look_back_too_large():
+    """Verifies a clear ValueError is raised when look_back >= len(X)."""
+    X = np.random.rand(5, 3)
+    y = np.random.rand(5)
+    with pytest.raises(ValueError, match="look_back"):
+        create_sequences(X, y, look_back=5)
+
+
+def test_create_sequences_raises_when_look_back_exceeds_length():
+    X = np.random.rand(10, 2)
+    y = np.random.rand(10)
+    with pytest.raises(ValueError, match="look_back"):
+        create_sequences(X, y, look_back=20)
+
+
 def test_train_xgboost_returns_fitted_model(sample_config):
     pytest.importorskip("xgboost")
     from src.models import train_xgboost

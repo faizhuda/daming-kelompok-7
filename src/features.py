@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -5,6 +6,8 @@ import pandas as pd
 
 from src.config_loader import load_config
 from src.utils import validate_columns
+
+logger = logging.getLogger(__name__)
 
 
 def add_cyclical_features(
@@ -33,6 +36,7 @@ def add_cyclical_features(
     df_feat["dow_sin"] = np.sin(2 * np.pi * dayofweek / 7.0)
     df_feat["dow_cos"] = np.cos(2 * np.pi * dayofweek / 7.0)
 
+    logger.info("add_cyclical_features: added 6 cyclical columns")
     return df_feat
 
 
@@ -64,6 +68,9 @@ def create_lag_features(
                 df_feat[f"{col}_lag{lag}"] = df_feat.groupby(city_id_col)[col].shift(
                     lag
                 )
+
+    n_new = len(lag_cols) * len(lags)
+    logger.info("create_lag_features: added %d lag columns", n_new)
     return df_feat
 
 
@@ -71,6 +78,9 @@ def create_rolling_features(
     df: pd.DataFrame, cols: List[str], config: Optional[Dict[str, Any]] = None
 ) -> pd.DataFrame:
     """Creates rolling mean and standard deviation features for specified columns per city.
+
+    Rolling statistics use shift(1) before the window to ensure only past values are
+    included, preventing any lookahead bias from the current timestep.
 
     Args:
         df (pd.DataFrame): The input dataframe.
@@ -94,10 +104,20 @@ def create_rolling_features(
             for w in windows:
                 df_feat[f"{col}_roll{w}m"] = df_feat.groupby(city_id_col)[
                     col
-                ].transform(lambda x: x.rolling(w, min_periods=1).mean())
+                ].transform(
+                    lambda x, _w=w: x.shift(1).rolling(_w, min_periods=1).mean()
+                )
                 df_feat[f"{col}_roll{w}std"] = df_feat.groupby(city_id_col)[
                     col
-                ].transform(lambda x: x.rolling(w, min_periods=1).std().fillna(0))
+                ].transform(
+                    lambda x, _w=w: x.shift(1)
+                    .rolling(_w, min_periods=1)
+                    .std()
+                    .fillna(0)
+                )
+
+    n_new = len(cols) * len(windows) * 2
+    logger.info("create_rolling_features: added %d rolling columns", n_new)
     return df_feat
 
 
@@ -130,4 +150,5 @@ def create_pollutant_interactions(df: pd.DataFrame) -> pd.DataFrame:
             df_feat["nitrogen_dioxide_lag1"] + eps
         )
 
+    logger.info("create_pollutant_interactions: added interaction features")
     return df_feat

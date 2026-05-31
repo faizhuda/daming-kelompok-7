@@ -34,6 +34,7 @@ models:
     learning_rate: 0.05
     subsample: 0.8
     colsample_bytree: 0.8
+    early_stopping_rounds: 20
 
 visualization:
   plot_sample_size: 500   # max data points shown in prediction time-series plot

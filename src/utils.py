@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,8 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src.config_loader import load_config
+
+logger = logging.getLogger(__name__)
 
 
 def validate_columns(
@@ -51,13 +54,21 @@ def evaluate_model(
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     r2 = r2_score(y_true, y_pred)
     mape = np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100
-    return {"Model": model_name, "MAE": mae, "RMSE": rmse, "R2": r2, "MAPE": mape}
+    result = {"Model": model_name, "MAE": mae, "RMSE": rmse, "R2": r2, "MAPE": mape}
+    logger.info(
+        "evaluate_model [%s] — MAE=%.4f RMSE=%.4f R2=%.4f",
+        model_name,
+        mae,
+        rmse,
+        r2,
+    )
+    return result
 
 
 def plot_predictions(
-    dates,
-    y_true,
-    y_pred,
+    dates: Any,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
     model_name: str,
     save_dir: str = "results/plots",
     config: Optional[Dict[str, Any]] = None,
@@ -65,9 +76,9 @@ def plot_predictions(
     """Plot predictions against true values and scatter plot.
 
     Args:
-        dates: Array-like of datetime values for the x-axis.
-        y_true: Array-like of ground-truth target values.
-        y_pred: Array-like of model predictions.
+        dates (Any): Array-like of datetime values for the x-axis.
+        y_true (np.ndarray): Array-like of ground-truth target values.
+        y_pred (np.ndarray): Array-like of model predictions.
         model_name (str): Label used in the plot title and filename.
         save_dir (str): Directory where the PNG is saved.
         config (Optional[Dict[str, Any]]): Config dict. Loads from YAML if None.
@@ -103,6 +114,7 @@ def plot_predictions(
     path = os.path.join(save_dir, f"{fname}_prediction.png")
     plt.savefig(path, dpi=120)
     plt.close()
+    logger.info("plot_predictions: saved → %s", path)
     return path
 
 
@@ -139,3 +151,4 @@ def log_experiment(
         if not file_exists:
             writer.writeheader()
         writer.writerow(row)
+    logger.info("log_experiment: appended [%s] → %s", model_name, log_path)

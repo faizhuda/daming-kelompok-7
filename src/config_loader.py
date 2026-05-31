@@ -1,9 +1,13 @@
-import os
+import logging
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 import yaml
-from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
-def load_config(config_path: str = None) -> Dict[str, Any]:
+def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """Loads and returns the configuration from a YAML file.
 
     Args:
@@ -17,13 +21,15 @@ def load_config(config_path: str = None) -> Dict[str, Any]:
         FileNotFoundError: If the configuration file cannot be found.
     """
     if config_path is None:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_path = os.path.join(base_dir, "configs", "config.yaml")
+        path = Path(__file__).parent.parent / "configs" / "config.yaml"
+    else:
+        path = Path(config_path)
 
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Configuration file not found at: {config_path}")
+    if not path.exists():
+        raise FileNotFoundError(f"Configuration file not found at: {path}")
 
-    with open(config_path, "r") as file:
+    with open(path, "r") as file:
         config = yaml.safe_load(file)
 
+    logger.info("load_config: loaded from %s", path)
     return config

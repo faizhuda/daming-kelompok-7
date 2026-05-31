@@ -16,7 +16,7 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 1. **XGBoost sebagai Model Utama**: Algoritma *Gradient Boosting* dipilih berdasarkan studi Grinsztajn et al. (NeurIPS 2022) yang menunjukkan gradient boosting secara konsisten unggul pada tabular data dengan fitur eksplisit. Hasil test set: MAE=1.31, RMSE=1.94, R²=0.9983 (209K baris, Jan–Nov 2025).
 2. **Evaluasi Model Mendalam** (`06_model_evaluation.ipynb`): Residual analysis 4-panel, feature importance, per-city breakdown (30+ kota), extreme AQI event analysis, dan walk-forward cross-validation 3-fold.
 3. **Dekopling Konfigurasi (`configs/config.yaml`)**: Seluruh nilai variabel *hardcoded* — termasuk nama kolom, lags, rolling window, winsorize limits, **dan hyperparameter model** — diisolasi dalam satu file konfigurasi terpusat.
-4. **Unit Testing Otomatis (`pytest` + coverage)**: 19 unit test mencakup cleaning, features, models, dan utils. Coverage report ditampilkan otomatis di CI.
+4. **Unit Testing Otomatis (`pytest` + coverage)**: 45 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI.
 5. **CI/CD Pipeline (GitHub Actions)**: GitHub akan otomatis memverifikasi kerapian penulisan kode (`black`, `flake8`) dan kesuksesan seluruh pengujian otomatis di setiap *push* atau *pull request*.
 6. **Experiment Tracking (CSV)**: Setiap run training dapat dicatat ke `results/experiment_log.csv` via `log_experiment()` untuk perbandingan antar eksperimen.
 7. **CLI Pipeline**: Jalankan tahap *cleaning* dan *feature engineering* tanpa membuka Jupyter: `python src/pipeline.py --stage all`.
@@ -29,7 +29,7 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 ├── .github/workflows/      # Otomatisasi CI/CD (GitHub Actions)
 ├── configs/
 │   └── config.yaml         # Parameter konfigurasi terpusat (lags, windows, model hyperparams)
-├── notebooks/              # Alur eksplorasi (01_eda.ipynb hingga 06_model_evaluation.ipynb)
+├── notebooks/              # Alur eksplorasi (01_eda.ipynb hingga 07_lstm_forecasting.ipynb)
 ├── src/                    # Kode logika modular (reusable modules)
 │   ├── cleaning.py         # Pembersihan data, imputasi, & winsorization
 │   ├── config_loader.py    # Utilitas pembaca konfigurasi YAML
@@ -38,14 +38,17 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 │   ├── pipeline.py         # CLI end-to-end pipeline (clean → features)
 │   └── utils.py            # Evaluasi model, plotting, validasi kolom, experiment logging
 ├── tests/                  # Unit testing kode pemrograman
-│   ├── conftest.py         # Generator data simulasi & config fixture
-│   ├── test_cleaning.py    # Uji fungsionalitas cleaning
-│   ├── test_features.py    # Uji fungsionalitas ekstraksi fitur
-│   ├── test_models.py      # Uji create_sequences & train_xgboost
-│   └── test_utils.py       # Uji evaluate_model, validate_columns, log_experiment
+│   ├── conftest.py             # Generator data simulasi & config fixture
+│   ├── test_cleaning.py        # Uji clean_data, winsorize_city, impute_missing_linear
+│   ├── test_config_loader.py   # Uji load_config & validasi struktur config
+│   ├── test_features.py        # Uji lag, rolling, cyclical, interactions
+│   ├── test_models.py          # Uji create_sequences & train_xgboost
+│   ├── test_pipeline.py        # Uji run_clean, run_features, main (CLI)
+│   └── test_utils.py           # Uji evaluate_model, validate_columns, log_experiment
 ├── AQI Bangladesh.csv      # Dataset mentah kualitas udara
 ├── Dockerfile              # Docker image Python 3.11 + Jupyter Lab
 ├── docker-compose.yml      # Jalankan Jupyter via `docker compose up`
+├── .dockerignore           # File yang dikecualikan saat build Docker image
 ├── .pre-commit-config.yaml # black + flake8 otomatis sebelum commit
 ├── requirements.txt        # Dependensi pustaka Python (pinned >=X,<Y)
 └── README.md               # Dokumentasi utama proyek
@@ -142,6 +145,8 @@ graph LR
     N04 -->|data/processed/*.csv + artifacts/*.pkl| N05["05_modelling.ipynb"]
     N05 -->|models/xgboost_model.pkl + results/| N06["06_model_evaluation.ipynb"]
     N06 -->|results/deep_metrics/ + plots/| Done["✅ Output Final"]
+    Raw -->|load langsung| N07["07_lstm_forecasting.ipynb"]
+    N07 -->|models/lstm_aqi_model.h5 + results/forecast_*.csv| Done
 ```
 
 ### Detail Langkah-Langkah Pipeline:
@@ -168,6 +173,11 @@ graph LR
    - Memuat model XGBoost dari `notebooks/models/xgboost_model.pkl`.
    - Melakukan evaluasi mendalam: residual analysis 4-panel, feature importance (top 25), per-city breakdown (30+ kota), extreme AQI event analysis (AQI > 150), dan walk-forward cross-validation 3-fold.
    - Menyimpan seluruh hasil ke `notebooks/results/` (CSV + PNG).
+7. **`07_lstm_forecasting.ipynb`** *(standalone — tidak bergantung pada nb02–nb06)*:
+   - Memuat dataset mentah langsung dari `AQI Bangladesh.csv`.
+   - Melatih **Bidirectional LSTM** (3-layer: BiLSTM 128 → BiLSTM 64 → LSTM 32) dengan sliding window 48 jam.
+   - Menghasilkan **forecast AQI 30 hari ke depan** menggunakan recursive forecasting.
+   - Menyimpan model ke `notebooks/models/lstm_aqi_model.h5` dan forecast ke `notebooks/results/forecast_aqi_30hari.csv`.
 
 ---
 
@@ -187,7 +197,9 @@ graph TD
 ```
 
 ### 2. Cara Menjalankan Eksperimen di Google Colab
-Jika Anda atau rekan kelompok ingin melatih model XGBoost yang berat menggunakan GPU/CPU Google Colab, gunakan sel pembuka berikut di Google Colab:
+Jika Anda atau rekan kelompok ingin melatih model (XGBoost di `05_modelling.ipynb` atau LSTM di `07_lstm_forecasting.ipynb`) menggunakan GPU/CPU Google Colab, gunakan sel pembuka berikut:
+
+> **Catatan:** `requirements.txt` menyertakan `tensorflow` untuk kebutuhan `07_lstm_forecasting.ipynb`. Instalasi TensorFlow di Colab membutuhkan waktu lebih lama (~2–3 menit).
 
 #### Jika Repositori GitHub Anda bersifat **PUBLIK**:
 ```python

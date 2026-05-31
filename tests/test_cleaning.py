@@ -14,9 +14,8 @@ def test_clean_data(sample_raw_data, sample_config):
 
     cleaned_df = clean_data(sample_raw_data, config=sample_config)
 
-    # 1. Duplicates should be dropped (1 row) and missing AQI should be dropped (1 row)
-    # Total rows should reduce from 49 to 47
-    assert len(cleaned_df) == 47
+    # 1 duplicate + 1 missing AQI dropped = 2 rows removed
+    assert len(cleaned_df) == original_length - 2
 
     # 2. Negative values should be converted to NaN and then linear-interpolated
     # Hence, index 5 should now contain a valid positive number
@@ -48,3 +47,46 @@ def test_winsorize_city(sample_raw_data, sample_config):
     assert len(winsorized) == len(df_unique)
     # The extreme value 5000 should be clipped to the 99th percentile limit
     assert winsorized[col].iloc[0] < 5000.0
+
+
+def test_winsorize_city_does_not_modify_input(sample_raw_data, sample_config):
+    """Verifies that winsorize_city returns a new DataFrame without mutating the input."""
+    col = "pm10"
+    sample_raw_data.loc[0, col] = 5000.0
+    original_value = sample_raw_data[col].iloc[0]
+
+    winsorize_city(
+        sample_raw_data, col, limits=sample_config["cleaning"]["winsorize_limits"]
+    )
+
+    # Input should be unchanged
+    assert sample_raw_data[col].iloc[0] == original_value
+
+
+def test_impute_missing_linear(sample_raw_data, sample_config):
+    """Verifies that linear interpolation fills NaN values without leaving gaps."""
+    df = (
+        sample_raw_data.sort_values(["city_id", "datetime"])
+        .reset_index(drop=True)
+        .copy()
+    )
+    # Inject a NaN in the middle of the series
+    df.loc[10, "carbon_monoxide"] = np.nan
+
+    result = impute_missing_linear(df, ["carbon_monoxide"])
+
+    # No NaNs should remain
+    assert not result["carbon_monoxide"].isna().any()
+    # Interpolated value at row 10 should be positive (neighboring values are positive)
+    assert result["carbon_monoxide"].iloc[10] > 0
+
+
+def test_impute_missing_linear_does_not_modify_input(sample_raw_data):
+    """Verifies that impute_missing_linear returns a new DataFrame without mutating the input."""
+    df = sample_raw_data.copy()
+    df.loc[10, "carbon_monoxide"] = np.nan
+
+    impute_missing_linear(df, ["carbon_monoxide"])
+
+    # Input should still have the NaN
+    assert pd.isna(df.loc[10, "carbon_monoxide"])

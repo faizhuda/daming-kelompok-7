@@ -1,0 +1,42 @@
+# Virtual environment — bisa 1–2 GB, tidak dibutuhkan di image
+.venv/
+venv/
+env/
+
+# Git history
+.git/
+
+# IDE & tools
+.claude/
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Distribution artifacts
+dist/
+build/
+*.egg-info/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Dataset besar — tersedia via volume mount saat runtime (docker compose up)
+# sehingga tidak perlu di-copy ke dalam image
+AQI Bangladesh.csv
+
+# Generated notebook outputs — tersedia via volume mount
+notebooks/data/
+notebooks/results/
+notebooks/models/
+notebooks/artifacts/

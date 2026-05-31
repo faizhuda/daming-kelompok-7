@@ -1,10 +1,11 @@
 import csv
+import os
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from src.utils import evaluate_model, log_experiment, validate_columns
+from src.utils import evaluate_model, log_experiment, plot_predictions, validate_columns
 
 
 def test_evaluate_model_perfect_prediction():
@@ -85,3 +86,29 @@ def test_log_experiment_appends_on_subsequent_calls(tmp_path):
     assert len(rows) == 2
     assert rows[0]["model"] == "Model1"
     assert rows[1]["model"] == "Model2"
+
+
+def test_plot_predictions_creates_png_file(tmp_path):
+    """Smoke test: verifies plot_predictions saves a PNG without crashing."""
+    dates = pd.date_range("2023-01-01", periods=20, freq="h")
+    y_true = np.random.rand(20) * 100
+    y_pred = np.random.rand(20) * 100
+
+    path = plot_predictions(dates, y_true, y_pred, "TestModel", save_dir=str(tmp_path))
+
+    assert os.path.exists(path)
+    assert path.endswith(".png")
+
+
+def test_plot_predictions_respects_sample_size(tmp_path):
+    """Verifies plot_predictions uses plot_sample_size from config to limit plotted points."""
+    dates = pd.date_range("2023-01-01", periods=50, freq="h")
+    y_true = np.random.rand(50) * 100
+    y_pred = np.random.rand(50) * 100
+    config = {"visualization": {"plot_sample_size": 10}}
+
+    path = plot_predictions(
+        dates, y_true, y_pred, "SampleModel", save_dir=str(tmp_path), config=config
+    )
+
+    assert os.path.exists(path)

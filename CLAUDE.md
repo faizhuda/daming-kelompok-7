@@ -33,7 +33,8 @@ daming-kelompok-7/
 │   ├── 03_feature_engineering.ipynb  # Feature Engineering → simpan data/df_feat.csv
 │   ├── 04_preprocessing.ipynb        # Encoding + Scaling → simpan data/processed/ + artifacts/
 │   ├── 05_modelling.ipynb   # Training XGBoost + 2 baselines → simpan models/ + results/
-│   └── 06_model_evaluation.ipynb  # Deep evaluation: residual, per-city, CV, feature importance
+│   ├── 06_model_evaluation.ipynb  # Deep evaluation: residual, per-city, CV, feature importance
+│   └── 07_lstm_forecasting.ipynb  # LSTM Bidirectional — forecasting AQI 30 hari ke depan
 ├── src/                     # Kode modular yang dapat diimpor
 │   ├── cleaning.py          # Fungsi pembersihan data
 │   ├── config_loader.py     # Pembaca konfigurasi YAML
@@ -42,14 +43,17 @@ daming-kelompok-7/
 │   ├── pipeline.py          # CLI end-to-end pipeline (clean → features)
 │   └── utils.py             # Evaluasi, plotting, validate_columns, log_experiment
 ├── tests/
-│   ├── conftest.py          # Fixtures pytest (dummy data + sample_config)
-│   ├── test_cleaning.py     # Unit test untuk src/cleaning.py
-│   ├── test_features.py     # Unit test untuk src/features.py
-│   ├── test_models.py       # Unit test untuk src/models.py
-│   └── test_utils.py        # Unit test untuk src/utils.py
+│   ├── conftest.py              # Fixtures pytest (dummy data + sample_config)
+│   ├── test_cleaning.py         # Unit test untuk src/cleaning.py
+│   ├── test_config_loader.py    # Unit test untuk src/config_loader.py
+│   ├── test_features.py         # Unit test untuk src/features.py
+│   ├── test_models.py           # Unit test untuk src/models.py
+│   ├── test_pipeline.py         # Unit test untuk src/pipeline.py (run_clean, run_features, main)
+│   └── test_utils.py            # Unit test untuk src/utils.py
 ├── AQI Bangladesh.csv       # Dataset mentah (jangan diubah)
 ├── Dockerfile               # Docker image Python 3.11 + Jupyter Lab
 ├── docker-compose.yml       # Jalankan Jupyter dengan `docker compose up`
+├── .dockerignore            # File yang dikecualikan saat build Docker image
 ├── .pre-commit-config.yaml  # black + flake8 otomatis sebelum commit
 ├── requirements.txt         # Dependensi Python (versioned dengan upper bounds >=X,<Y)
 └── README.md                # Dokumentasi utama
@@ -80,8 +84,10 @@ python -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 # Jalankan test spesifik
 python -m pytest tests/test_cleaning.py -v
+python -m pytest tests/test_config_loader.py -v
 python -m pytest tests/test_features.py -v
 python -m pytest tests/test_models.py -v
+python -m pytest tests/test_pipeline.py -v
 python -m pytest tests/test_utils.py -v
 ```
 
@@ -142,6 +148,8 @@ docker compose up -d
 → 04_preprocessing.ipynb        (menghasilkan notebooks/data/processed/ & notebooks/artifacts/)
 → 05_modelling.ipynb            (menghasilkan notebooks/models/ & notebooks/results/)
 → 06_model_evaluation.ipynb    (evaluasi mendalam: residual, per-city, walk-forward CV)
+
+07_lstm_forecasting.ipynb      (standalone — membaca AQI Bangladesh.csv langsung, tidak bergantung pada nb02–06)
 ```
 
 Jalankan Jupyter dari folder `notebooks/`:
@@ -228,10 +236,10 @@ def create_lag_features(
 | `hour_sin`, `hour_cos` | — | Cyclical encoding jam (0–23) |
 | `month_sin`, `month_cos` | — | Cyclical encoding bulan (1–12) |
 | `dow_sin`, `dow_cos` | — | Cyclical encoding hari dalam seminggu |
-| `pm_ratio` | — | pm2_5 / (pm10 + ε) |
-| `pm_total` | — | pm10 + pm2_5 |
-| `oxidant_load` | — | NO₂ + O₃ |
-| `combustion_idx` | — | CO / (NO₂ + ε) |
+| `pm_ratio_lag1` | — | pm2_5[t-1] / (pm10[t-1] + ε) — fraksi partikel halus |
+| `pm_total_lag1` | — | pm10[t-1] + pm2_5[t-1] — beban partikel total |
+| `oxidant_load_lag1` | — | NO₂[t-1] + O₃[t-1] — beban oksidan |
+| `combustion_idx_lag1` | — | CO[t-1] / (NO₂[t-1] + ε) — indikator pembakaran tidak sempurna |
 
 ---
 
@@ -287,15 +295,22 @@ notebooks/
 ├── artifacts/
 │   ├── robust_scaler.pkl              # Keluaran 04_preprocessing.ipynb
 │   ├── label_encoder_city.pkl
-│   └── feature_list.json
+│   ├── feature_list.json
+│   ├── lstm_scaler_X.pkl              # Keluaran 07_lstm_forecasting.ipynb (RobustScaler fitur)
+│   └── lstm_scaler_y.pkl              # Keluaran 07_lstm_forecasting.ipynb (MinMaxScaler target)
 ├── models/
-│   └── xgboost_model.pkl              # Keluaran 05_modelling.ipynb
+│   ├── xgboost_model.pkl              # Keluaran 05_modelling.ipynb
+│   ├── best_lstm_aqi.h5               # Keluaran 07_lstm_forecasting.ipynb (best checkpoint)
+│   └── lstm_aqi_model.h5              # Keluaran 07_lstm_forecasting.ipynb (final model)
 └── results/
     ├── metrics_comparison.csv
     ├── deep_metrics_comparison.csv    # Keluaran 06_model_evaluation.ipynb
     ├── feature_importance.csv
     ├── per_city_metrics.csv
     ├── xgb_cv_results.csv
+    ├── forecast_aqi_30hari.csv        # Keluaran 07_lstm_forecasting.ipynb (harian)
+    ├── forecast_aqi_hourly_30hari.csv # Keluaran 07_lstm_forecasting.ipynb (per jam)
+    ├── experiment_log.csv             # Log semua training run (log_experiment)
     └── plots/
         ├── xgboost_prediction.png
         ├── metrics_comparison_bar.png
@@ -332,10 +347,12 @@ def test_evaluate_model_perfect_prediction():
 File test yang tersedia:
 | File | Modul yang Ditest |
 |---|---|
-| `test_cleaning.py` | `src/cleaning.py` — clean_data, winsorize_city |
+| `test_cleaning.py` | `src/cleaning.py` — clean_data, winsorize_city, impute_missing_linear |
+| `test_config_loader.py` | `src/config_loader.py` — load_config, validasi struktur config |
 | `test_features.py` | `src/features.py` — lag, rolling, cyclical, interactions |
 | `test_models.py` | `src/models.py` — create_sequences, train_xgboost |
-| `test_utils.py` | `src/utils.py` — evaluate_model, validate_columns, log_experiment |
+| `test_pipeline.py` | `src/pipeline.py` — run_clean, run_features, main (CLI) |
+| `test_utils.py` | `src/utils.py` — evaluate_model, validate_columns, log_experiment, plot_predictions |
 
 ---
 
@@ -344,7 +361,7 @@ File test yang tersedia:
 Pipeline CI berjalan otomatis di setiap **push** dan **pull request** ke branch `main`/`master`.
 
 **Tahapan:**
-1. Setup Python 3.10
+1. Setup Python 3.11
 2. `pip install -r requirements.txt`
 3. `flake8` — cek error kritis (syntax error, undefined name)
 4. `black --check` — verifikasi format kode
@@ -379,7 +396,7 @@ File `experiment_log.csv` akan dibuat otomatis jika belum ada, dan setiap run ba
 
 1. **Python 3.11 direkomendasikan** untuk environment lokal — sesuai dengan versi yang digunakan di CI/CD.
 2. **Jangan edit `src/` langsung di Google Colab** — lakukan perubahan di lokal dan push ke GitHub.
-3. **Urutan notebook wajib dijaga** — setiap notebook bergantung pada output berkas CSV/PKL dari notebook sebelumnya.
+3. **Urutan notebook wajib dijaga** — setiap notebook bergantung pada output berkas CSV/PKL dari notebook sebelumnya *(kecuali `07_lstm_forecasting.ipynb` yang standalone dan membaca langsung dari `AQI Bangladesh.csv`).*
 4. **Semua parameter konfigurasi harus dari `configs/config.yaml`** — jangan hardcode nilai apapun di `src/`, termasuk hyperparameter model.
 5. **Train-Test Split selalu Time-Aware** — split berdasarkan waktu (80% awal = train, 20% akhir = test), bukan random, untuk menghindari data leakage.
 6. **`RobustScaler` hanya di-fit pada data train**, lalu ditransformasi ke data test — jangan fit ulang pada test set.

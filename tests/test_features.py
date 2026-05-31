@@ -47,7 +47,7 @@ def test_create_lag_features(sample_raw_data, sample_config):
 
 
 def test_create_rolling_features(sample_raw_data, sample_config):
-    """Verifies rolling averages match manually calculated sliding windows per city group."""
+    """Verifies rolling averages use shift(1) so only past values are included (no lookahead)."""
     df_sorted = sample_raw_data.sort_values(["city_id", "datetime"]).reset_index(
         drop=True
     )
@@ -59,8 +59,9 @@ def test_create_rolling_features(sample_raw_data, sample_config):
     assert "pm10_roll3m" in df_roll.columns
     assert "pm10_roll3std" in df_roll.columns
 
-    # Mean of index 0, 1, 2 should equal the rolling window output at index 2
-    expected_mean = df_sorted["pm10"].iloc[0:3].mean()
+    # At index 2: rolling window sees shift(1)[0..2] = [NaN, pm10[0], pm10[1]]
+    # With min_periods=1, mean = mean(pm10[0], pm10[1]) — only past values, no current
+    expected_mean = df_sorted["pm10"].iloc[0:2].mean()
     assert np.isclose(df_roll["pm10_roll3m"].iloc[2], expected_mean)
 
 

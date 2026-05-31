@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
 import pandas as pd
 
@@ -52,7 +53,9 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def run_clean(df_raw: pd.DataFrame, config: dict, output_dir: Path) -> pd.DataFrame:
+def run_clean(
+    df_raw: pd.DataFrame, config: Dict[str, Any], output_dir: Path
+) -> pd.DataFrame:
     logger.info("Stage: cleaning...")
     df_clean = clean_data(df_raw, config=config)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,7 +67,7 @@ def run_clean(df_raw: pd.DataFrame, config: dict, output_dir: Path) -> pd.DataFr
 
 
 def run_features(
-    df_clean: pd.DataFrame, config: dict, output_dir: Path
+    df_clean: pd.DataFrame, config: Dict[str, Any], output_dir: Path
 ) -> pd.DataFrame:
     logger.info("Stage: feature engineering...")
     pollutant_cols = config["data"]["pollutant_cols"]

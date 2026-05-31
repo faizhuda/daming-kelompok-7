@@ -1,3 +1,7 @@
+import matplotlib
+
+matplotlib.use("Agg")  # non-interactive backend — required for tests without a display
+
 import pytest
 import numpy as np
 import pandas as pd
@@ -67,6 +71,7 @@ def sample_config() -> dict:
                 "learning_rate": 0.1,
                 "subsample": 0.8,
                 "colsample_bytree": 0.8,
+                "early_stopping_rounds": 5,
             },
         },
         "visualization": {

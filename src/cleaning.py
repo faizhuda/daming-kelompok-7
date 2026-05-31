@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -5,6 +6,8 @@ import pandas as pd
 
 from src.config_loader import load_config
 from src.utils import validate_columns
+
+logger = logging.getLogger(__name__)
 
 
 def winsorize_city(
@@ -19,7 +22,7 @@ def winsorize_city(
         city_id_col (str, optional): The column name identifying cities. Defaults to "city_id".
 
     Returns:
-        pd.DataFrame: The dataframe with the specified column winsorized.
+        pd.DataFrame: A new dataframe with the specified column winsorized.
     """
 
     def winsorize_series(s: pd.Series) -> pd.Series:
@@ -27,6 +30,7 @@ def winsorize_city(
         upper = s.quantile(limits[1])
         return s.clip(lower, upper)
 
+    df = df.copy()
     df[col] = df.groupby(city_id_col)[col].transform(winsorize_series)
     return df
 
@@ -42,8 +46,9 @@ def impute_missing_linear(
         city_id_col (str, optional): The column name identifying cities. Defaults to "city_id".
 
     Returns:
-        pd.DataFrame: The dataframe with imputed values.
+        pd.DataFrame: A new dataframe with imputed values.
     """
+    df = df.copy()
     for col in cols:
         df[col] = df.groupby(city_id_col)[col].transform(
             lambda x: x.interpolate(method="linear", limit_direction="both")
@@ -79,6 +84,7 @@ def clean_data(
     winsorize_limits = clean_cfg["winsorize_limits"]
 
     validate_columns(df, [datetime_col, city_id_col], "clean_data")
+    n_input = len(df)
     df_clean = df.copy()
 
     # 1. Parse datetime
@@ -93,10 +99,13 @@ def clean_data(
         if col in df_clean.columns:
             df_clean.loc[df_clean[col] < 0, col] = np.nan
 
-    # 4. Winsorizing per city
+    # 4. Winsorizing per city (inline — df_clean is already a copy, avoids N redundant copies)
+    def _ws(s: pd.Series) -> pd.Series:
+        return s.clip(s.quantile(winsorize_limits[0]), s.quantile(winsorize_limits[1]))
+
     for col in pollutant_cols:
         if col in df_clean.columns:
-            df_clean = winsorize_city(df_clean, col, winsorize_limits, city_id_col)
+            df_clean[col] = df_clean.groupby(city_id_col)[col].transform(_ws)
 
     # 5. Drop carbon dioxide (>74% missing)
     if carbon_dioxide_col in df_clean.columns:
@@ -106,7 +115,17 @@ def clean_data(
     if aqi_col in df_clean.columns:
         df_clean = df_clean.dropna(subset=[aqi_col])
 
-    # 7. Interpolation
-    df_clean = impute_missing_linear(df_clean, pollutant_cols, city_id_col)
+    # 7. Interpolation (inline — df_clean is already a copy, avoids redundant copy)
+    for col in pollutant_cols:
+        if col in df_clean.columns:
+            df_clean[col] = df_clean.groupby(city_id_col)[col].transform(
+                lambda x: x.interpolate(method="linear", limit_direction="both")
+            )
 
+    logger.info(
+        "clean_data: %d → %d rows (dropped %d)",
+        n_input,
+        len(df_clean),
+        n_input - len(df_clean),
+    )
     return df_clean

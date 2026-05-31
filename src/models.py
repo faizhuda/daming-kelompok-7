@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional, Tuple
 import logging
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import xgboost as xgb
@@ -22,7 +22,15 @@ def create_sequences(
     Returns:
         Tuple[np.ndarray, np.ndarray]: (Xs, ys) where Xs has shape
             (n_samples - look_back, look_back, n_features).
+
+    Raises:
+        ValueError: If look_back is greater than or equal to len(X).
     """
+    if look_back >= len(X):
+        raise ValueError(
+            f"look_back ({look_back}) must be less than len(X) ({len(X)}). "
+            "Provide more data or reduce the look_back window."
+        )
     Xs, ys = [], []
     for i in range(len(X) - look_back):
         Xs.append(X[i : i + look_back])
@@ -37,7 +45,7 @@ def train_xgboost(
     y_val: np.ndarray,
     params: Optional[Dict[str, Any]] = None,
     config: Optional[Dict[str, Any]] = None,
-) -> Any:
+) -> xgb.XGBRegressor:
     """Train an XGBoost Regressor with early stopping on a validation set.
 
     Args:
@@ -50,7 +58,7 @@ def train_xgboost(
         config (Optional[Dict[str, Any]]): Config dict. Loads from YAML if None.
 
     Returns:
-        Any: The trained XGBRegressor model.
+        xgb.XGBRegressor: The trained XGBoost regressor model.
     """
     if params is None:
         if config is None:
@@ -62,6 +70,7 @@ def train_xgboost(
             "learning_rate": xgb_cfg["learning_rate"],
             "subsample": xgb_cfg.get("subsample", 0.8),
             "colsample_bytree": xgb_cfg.get("colsample_bytree", 0.8),
+            "early_stopping_rounds": xgb_cfg.get("early_stopping_rounds", 20),
             "random_state": 42,
             "n_jobs": -1,
         }
