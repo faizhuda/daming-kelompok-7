@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+
 def test_train_lightgbm_returns_fitted_model(sample_config):
     pytest.importorskip("lightgbm")
     from src.models import train_lightgbm

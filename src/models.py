@@ -9,7 +9,6 @@ from src.config_loader import load_config
 logger = logging.getLogger(__name__)
 
 
-
 def train_lightgbm(
     X_train: np.ndarray,
     y_train: np.ndarray,
