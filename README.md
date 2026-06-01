@@ -13,7 +13,7 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 ---
 
 ## Fitur Utama & Arsitektur
-1. **XGBoost sebagai Model Utama**: Algoritma *Gradient Boosting* dipilih berdasarkan studi Grinsztajn et al. (NeurIPS 2022) yang menunjukkan gradient boosting secara konsisten unggul pada tabular data dengan fitur eksplisit. Hasil test set: MAE=1.06, RMSE=1.70, R²=0.9987 (209K baris, Jan–Nov 2025).
+1. **LightGBM sebagai Model Utama**: Algoritma *Gradient Boosting* histogram-based dipilih berdasarkan studi Grinsztajn et al. (NeurIPS 2022) yang menunjukkan gradient boosting secara konsisten unggul pada tabular data dengan fitur eksplisit. LightGBM dipilih atas XGBoost karena efisiensi superior pada dataset berskala besar (1M+ baris): training 3–10× lebih cepat dengan memory footprint lebih rendah.
 2. **Evaluasi Model Mendalam** (`06_model_evaluation.ipynb`): Residual analysis 4-panel, feature importance, per-city breakdown (30+ kota), extreme AQI event analysis, dan walk-forward cross-validation 3-fold.
 3. **Pemisahan Konfigurasi (`configs/config.yaml`)**: Seluruh nilai variabel *hardcoded* — termasuk nama kolom, lags, rolling window, winsorize limits, **dan hyperparameter model** — diisolasi dalam satu file konfigurasi terpusat.
 4. **Unit Testing Otomatis (`pytest` + coverage)**: 45 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI. ✅ **Semua test passing, code audit completed (2026-05-31)**.
@@ -163,7 +163,7 @@ graph LR
     N05 -->|models/xgboost_model.pkl + results/| N06["06_model_evaluation.ipynb"]
     N06 -->|results/ + plots/| Done["✅ Output Final"]
     Raw -->|load langsung| N07["07_lstm_forecasting.ipynb"]
-    N07 -->|models/best_lstm_aqi.h5 + results/forecast_*.csv| Done
+    N07 -->|models/gru_aqi_model.h5 + results/forecast_*.csv| Done
 ```
 
 ### Detail Langkah-Langkah Pipeline:
@@ -192,9 +192,9 @@ graph LR
    - Menyimpan seluruh hasil ke `notebooks/results/` (CSV + PNG).
 7. **`07_lstm_forecasting.ipynb`** *(standalone — tidak bergantung pada nb02–nb06)*:
    - Memuat dataset mentah langsung dari `AQI Bangladesh.csv`.
-   - Melatih **Bidirectional LSTM** (3-layer: BiLSTM 128 → BiLSTM 64 → LSTM 32) dengan sliding window 48 jam.
+   - Melatih **GRU** (3-layer: GRU 128 → GRU 64 → GRU 32) dengan sliding window 48 jam — arsitektur kausal unidirectional, 25% lebih sedikit parameter dari BiLSTM (Chung et al., 2014).
    - Menghasilkan **forecast AQI 30 hari ke depan** menggunakan recursive forecasting.
-   - Menyimpan model ke `notebooks/models/best_lstm_aqi.h5` dan forecast ke `notebooks/results/forecast_aqi_30hari.csv`.
+   - Menyimpan model ke `notebooks/models/gru_aqi_model.h5` dan forecast ke `notebooks/results/forecast_aqi_30hari.csv`.
 
 ---
 

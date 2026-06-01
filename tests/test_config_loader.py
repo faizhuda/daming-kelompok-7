@@ -35,11 +35,11 @@ def test_load_config_pollutant_cols_is_nonempty_list():
     assert len(pollutants) > 0
 
 
-def test_load_config_xgboost_section_has_required_keys():
+def test_load_config_lightgbm_section_has_required_keys():
     config = load_config()
-    xgb = config["models"]["xgboost"]
-    for key in ("n_estimators", "max_depth", "learning_rate", "early_stopping_rounds"):
-        assert key in xgb, f"Missing xgboost key: {key}"
+    lgb = config["models"]["lightgbm"]
+    for key in ("n_estimators", "num_leaves", "learning_rate", "early_stopping_rounds"):
+        assert key in lgb, f"Missing lightgbm key: {key}"
 
 
 def test_load_config_raises_on_nonexistent_path():

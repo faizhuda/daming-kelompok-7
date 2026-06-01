@@ -2,9 +2,9 @@ import matplotlib
 
 matplotlib.use("Agg")  # non-interactive backend — required for tests without a display
 
-import pytest
-import numpy as np
-import pandas as pd
+import pytest  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
 
 @pytest.fixture
@@ -65,13 +65,15 @@ def sample_config() -> dict:
         "cleaning": {"winsorize_limits": [0.01, 0.99]},
         "features": {"lags": [1, 3], "rolling_windows": [3]},
         "models": {
-            "xgboost": {
+            "lightgbm": {
                 "n_estimators": 50,
-                "max_depth": 3,
+                "num_leaves": 15,
                 "learning_rate": 0.1,
                 "subsample": 0.8,
                 "colsample_bytree": 0.8,
                 "early_stopping_rounds": 5,
+                "min_child_samples": 5,
+                "n_jobs": -1,
             },
         },
         "visualization": {
