@@ -16,8 +16,8 @@ Proyek *Machine Learning* untuk memprediksi nilai **AQI (Air Quality Index)** se
 1. **LightGBM sebagai Model Utama**: Algoritma *Gradient Boosting* histogram-based dipilih berdasarkan studi Grinsztajn et al. (NeurIPS 2022) yang menunjukkan gradient boosting secara konsisten unggul pada tabular data dengan fitur eksplisit. LightGBM dipilih atas XGBoost karena efisiensi superior pada dataset berskala besar (1M+ baris): training 3–10× lebih cepat dengan memory footprint lebih rendah.
 2. **Evaluasi Model Mendalam** (`06_model_evaluation.ipynb`): Residual analysis 4-panel, feature importance, per-city breakdown (30 kota, 29 tampil di test set), extreme AQI event analysis, dan walk-forward cross-validation 3-fold.
 3. **Pemisahan Konfigurasi (`configs/config.yaml`)**: Seluruh nilai variabel *hardcoded* — termasuk nama kolom, lags, rolling window, winsorize limits, **dan hyperparameter model** — diisolasi dalam satu file konfigurasi terpusat.
-4. **Unit Testing Otomatis (`pytest` + coverage)**: 40 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI. ✅ **Semua test passing, code audit completed (2026-05-31)**.
-5. **CI/CD Pipeline (GitHub Actions)**: GitHub akan otomatis memverifikasi kerapian penulisan kode (`black`, `flake8`) dan kesuksesan seluruh pengujian otomatis di setiap *push* atau *pull request*. ✅ **Flake8 clean, black formatted**.
+4. **Unit Testing Otomatis (`pytest` + coverage)**: 40 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI. **Semua test passing, code audit completed (2026-05-31)**.
+5. **CI/CD Pipeline (GitHub Actions)**: GitHub akan otomatis memverifikasi kerapian penulisan kode (`black`, `flake8`) dan kesuksesan seluruh pengujian otomatis di setiap *push* atau *pull request*. **Flake8 clean, black formatted**.
 6. **Experiment Tracking (CSV)**: Setiap run training dapat dicatat ke `results/experiment_log.csv` via `log_experiment()` untuk perbandingan antar eksperimen.
 7. **CLI Pipeline**: Jalankan tahap *cleaning* dan *feature engineering* tanpa membuka Jupyter: `python src/pipeline.py --stage all`.
 8. **Docker Support**: Seluruh environment dapat dijalankan dalam container terisolasi via `docker compose up` — tidak perlu install Python 3.11 secara manual.
@@ -56,17 +56,17 @@ Proyek *Machine Learning* untuk memprediksi nilai **AQI (Air Quality Index)** se
 
 ---
 
-## 🔍 Status Kualitas Kode
+## Status Kualitas Kode
 
 | Aspek | Status | Detail |
 |---|---|---|
-| **Unit Tests** | ✅ 40/40 Passed | Semua test suite berjalan sukses |
-| **Code Linting** | ✅ Clean | Flake8 + black, 0 warnings |
-| **Type Hints** | ✅ Complete | Union type annotations konsisten di seluruh `src/` |
-| **Target Winsorizing** | ✅ Implemented | AQI target variable di-winsorize untuk mengatasi sensor spikes |
-| **MAPE Formula** | ✅ Standardized | Denominator `|y_true| + 1e-8`, semantik MAPE standar |
-| **Pre-commit Hooks** | ✅ Configured | black + flake8 otomatis sebelum commit |
-| **Model** | ✅ LightGBM | Gradient boosting histogram-based, tidak ada LSTM/XGBoost |
+| **Unit Tests** | 40/40 Passed | Semua test suite berjalan sukses |
+| **Code Linting** | Clean | Flake8 + black, 0 warnings |
+| **Type Hints** | Complete | Union type annotations konsisten di seluruh `src/` |
+| **Target Winsorizing** | Implemented | AQI target variable di-winsorize untuk mengatasi sensor spikes |
+| **MAPE Formula** | Standardized | Denominator `|y_true| + 1e-8`, semantik MAPE standar |
+| **Pre-commit Hooks** | Configured | black + flake8 otomatis sebelum commit |
+| **Model** | LightGBM | Gradient boosting histogram-based, tidak ada LSTM/XGBoost |
 
 **Code Quality Score: 87/100** — Foundation kuat, ready untuk production/portfolio GitHub.
 
@@ -160,7 +160,7 @@ graph LR
     N03 -->|data/df_feat.csv| N04["04_preprocessing.ipynb"]
     N04 -->|data/processed/*.csv + artifacts/*.pkl| N05["05_modelling.ipynb"]
     N05 -->|models/lightgbm_model.pkl + results/| N06["06_model_evaluation.ipynb"]
-    N06 -->|results/ + plots/| Done["✅ Output Final"]
+    N06 -->|results/ + plots/| Done["Output Final"]
 ```
 
 ### Detail Langkah-Langkah Pipeline:
