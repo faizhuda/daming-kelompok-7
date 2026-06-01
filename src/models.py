@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import lightgbm as lgb
 import numpy as np
@@ -8,34 +8,6 @@ from src.config_loader import load_config
 
 logger = logging.getLogger(__name__)
 
-
-def create_sequences(
-    X: np.ndarray, y: np.ndarray, look_back: int
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Convert a 2-D dataset into sequential 3-D inputs for sequence models.
-
-    Args:
-        X (np.ndarray): Scaled multi-feature 2D input array (n_samples, n_features).
-        y (np.ndarray): Target labels 1D array (n_samples,).
-        look_back (int): Window size — number of past time steps per sample.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray]: (Xs, ys) where Xs has shape
-            (n_samples - look_back, look_back, n_features).
-
-    Raises:
-        ValueError: If look_back is greater than or equal to len(X).
-    """
-    if look_back >= len(X):
-        raise ValueError(
-            f"look_back ({look_back}) must be less than len(X) ({len(X)}). "
-            "Provide more data or reduce the look_back window."
-        )
-    Xs, ys = [], []
-    for i in range(len(X) - look_back):
-        Xs.append(X[i : i + look_back])
-        ys.append(y[i + look_back])
-    return np.array(Xs), np.array(ys)
 
 
 def train_lightgbm(

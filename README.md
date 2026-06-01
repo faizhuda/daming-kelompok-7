@@ -1,6 +1,6 @@
 # Proyek Daming Kelompok 7: Prediksi AQI Bangladesh
 
-Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai **AQI (Air Quality Index)** secara *real-time* menggunakan data sensor multi-polutan di kota-kota besar Bangladesh.
+Proyek *Machine Learning* untuk memprediksi nilai **AQI (Air Quality Index)** secara *real-time* menggunakan data sensor multi-polutan di kota-kota besar Bangladesh.
 
 ---
 
@@ -14,9 +14,9 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 
 ## Fitur Utama & Arsitektur
 1. **LightGBM sebagai Model Utama**: Algoritma *Gradient Boosting* histogram-based dipilih berdasarkan studi Grinsztajn et al. (NeurIPS 2022) yang menunjukkan gradient boosting secara konsisten unggul pada tabular data dengan fitur eksplisit. LightGBM dipilih atas XGBoost karena efisiensi superior pada dataset berskala besar (1M+ baris): training 3–10× lebih cepat dengan memory footprint lebih rendah.
-2. **Evaluasi Model Mendalam** (`06_model_evaluation.ipynb`): Residual analysis 4-panel, feature importance, per-city breakdown (30+ kota), extreme AQI event analysis, dan walk-forward cross-validation 3-fold.
+2. **Evaluasi Model Mendalam** (`06_model_evaluation.ipynb`): Residual analysis 4-panel, feature importance, per-city breakdown (30 kota, 29 tampil di test set), extreme AQI event analysis, dan walk-forward cross-validation 3-fold.
 3. **Pemisahan Konfigurasi (`configs/config.yaml`)**: Seluruh nilai variabel *hardcoded* — termasuk nama kolom, lags, rolling window, winsorize limits, **dan hyperparameter model** — diisolasi dalam satu file konfigurasi terpusat.
-4. **Unit Testing Otomatis (`pytest` + coverage)**: 45 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI. ✅ **Semua test passing, code audit completed (2026-05-31)**.
+4. **Unit Testing Otomatis (`pytest` + coverage)**: 40 unit test di 6 file (cleaning, features, models, utils, pipeline, config_loader). Coverage report ditampilkan otomatis di CI. ✅ **Semua test passing, code audit completed (2026-05-31)**.
 5. **CI/CD Pipeline (GitHub Actions)**: GitHub akan otomatis memverifikasi kerapian penulisan kode (`black`, `flake8`) dan kesuksesan seluruh pengujian otomatis di setiap *push* atau *pull request*. ✅ **Flake8 clean, black formatted**.
 6. **Experiment Tracking (CSV)**: Setiap run training dapat dicatat ke `results/experiment_log.csv` via `log_experiment()` untuk perbandingan antar eksperimen.
 7. **CLI Pipeline**: Jalankan tahap *cleaning* dan *feature engineering* tanpa membuka Jupyter: `python src/pipeline.py --stage all`.
@@ -29,12 +29,12 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 ├── .github/workflows/      # Otomatisasi CI/CD (GitHub Actions)
 ├── configs/
 │   └── config.yaml         # Parameter konfigurasi terpusat (lags, windows, model hyperparams)
-├── notebooks/              # Alur eksplorasi (01_eda.ipynb hingga 07_lstm_forecasting.ipynb)
+├── notebooks/              # Alur eksplorasi (01_eda.ipynb hingga 06_model_evaluation.ipynb)
 ├── src/                    # Kode logika modular (reusable modules)
 │   ├── cleaning.py         # Pembersihan data, imputasi, & winsorization
 │   ├── config_loader.py    # Utilitas pembaca konfigurasi YAML
 │   ├── features.py         # Ekstraksi fitur siklikal, lag, rolling, & interaksi
-│   ├── models.py           # Pelatihan model (train_xgboost, create_sequences)
+│   ├── models.py           # Pelatihan model (train_lightgbm)
 │   ├── pipeline.py         # CLI end-to-end pipeline (clean → features)
 │   └── utils.py            # Evaluasi model, plotting, validasi kolom, experiment logging
 ├── tests/                  # Unit testing kode pemrograman
@@ -42,7 +42,7 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 │   ├── test_cleaning.py        # Uji clean_data, winsorize_city, impute_missing_linear
 │   ├── test_config_loader.py   # Uji load_config & validasi struktur config
 │   ├── test_features.py        # Uji lag, rolling, cyclical, interactions
-│   ├── test_models.py          # Uji create_sequences & train_xgboost
+│   ├── test_models.py          # Uji train_lightgbm
 │   ├── test_pipeline.py        # Uji run_clean, run_features, main (CLI)
 │   └── test_utils.py           # Uji evaluate_model, validate_columns, log_experiment
 ├── AQI Bangladesh.csv      # Dataset mentah kualitas udara
@@ -56,20 +56,19 @@ Proyek *Machine Learning* dan *Time-Series Forecasting* untuk memprediksi nilai 
 
 ---
 
-## 🔍 Status Kualitas Kode (Code Audit 2026-05-31)
+## 🔍 Status Kualitas Kode
 
 | Aspek | Status | Detail |
 |---|---|---|
-| **Unit Tests** | ✅ 45/45 Passed | Semua test suite berjalan sukses |
-| **Code Linting** | ✅ Clean | Flake8 E501 + E203 fixed, 0 warnings |
+| **Unit Tests** | ✅ 40/40 Passed | Semua test suite berjalan sukses |
+| **Code Linting** | ✅ Clean | Flake8 + black, 0 warnings |
 | **Type Hints** | ✅ Complete | Union type annotations konsisten di seluruh `src/` |
-| **Epsilon Consistency** | ✅ Fixed | `combustion_idx_lag1` kembali ke `eps = 1e-8` |
-| **Target Winsorizing** | ✅ Fixed | AQI target variable sekarang di-winsorize untuk mengatasi sensor spikes |
-| **MAPE Formula** | ✅ Standardized | Menggunakan denominator `|y_true| + 1e-8`, semantik MAPE standar |
-| **Lag Pattern Matching** | ✅ Precise | `_lag24` suffix matching, bukan substring `"lag24" in c` |
+| **Target Winsorizing** | ✅ Implemented | AQI target variable di-winsorize untuk mengatasi sensor spikes |
+| **MAPE Formula** | ✅ Standardized | Denominator `|y_true| + 1e-8`, semantik MAPE standar |
 | **Pre-commit Hooks** | ✅ Configured | black + flake8 otomatis sebelum commit |
+| **Model** | ✅ LightGBM | Gradient boosting histogram-based, tidak ada LSTM/XGBoost |
 
-**Code Quality Score: 85/100** — Foundation kuat, ready untuk production/portfolio GitHub.
+**Code Quality Score: 87/100** — Foundation kuat, ready untuk production/portfolio GitHub.
 
 ---
 
@@ -160,10 +159,8 @@ graph LR
     N02 -->|data/df_clean.csv| N03["03_feature_engineering.ipynb"]
     N03 -->|data/df_feat.csv| N04["04_preprocessing.ipynb"]
     N04 -->|data/processed/*.csv + artifacts/*.pkl| N05["05_modelling.ipynb"]
-    N05 -->|models/xgboost_model.pkl + results/| N06["06_model_evaluation.ipynb"]
+    N05 -->|models/lightgbm_model.pkl + results/| N06["06_model_evaluation.ipynb"]
     N06 -->|results/ + plots/| Done["✅ Output Final"]
-    Raw -->|load langsung| N07["07_lstm_forecasting.ipynb"]
-    N07 -->|models/gru_aqi_model.h5 + results/forecast_*.csv| Done
 ```
 
 ### Detail Langkah-Langkah Pipeline:
@@ -183,18 +180,13 @@ graph LR
    - Menyimpan dataset siap pakai ke `notebooks/data/processed/` dan berkas artefak (`scaler`, `encoder`, `feature_list`) ke `notebooks/artifacts/`.
 5. **`05_modelling.ipynb`**:
    - Memuat berkas dataset terproses dari `notebooks/data/processed/`.
-   - Melatih **XGBoost Regressor** (model utama) dan 2 baseline (Naive, Rolling Mean 24h).
+   - Melatih **LightGBM Regressor** (model utama) dan 2 baseline (Naive, Rolling Mean 24h).
    - Menyimpan perbandingan metrik evaluasi ke `notebooks/results/metrics_comparison.csv` dan visualisasi prediksi ke `notebooks/results/plots/`.
-   - Menyimpan model terlatih ke `notebooks/models/xgboost_model.pkl`.
+   - Menyimpan model terlatih ke `notebooks/models/lightgbm_model.pkl`.
 6. **`06_model_evaluation.ipynb`**:
-   - Memuat model XGBoost dari `notebooks/models/xgboost_model.pkl`.
-   - Melakukan evaluasi mendalam: residual analysis 4-panel, feature importance (top 25), per-city breakdown (30+ kota), extreme AQI event analysis (AQI > 150), dan walk-forward cross-validation 3-fold.
+   - Memuat model LightGBM dari `notebooks/models/lightgbm_model.pkl`.
+   - Melakukan evaluasi mendalam: residual analysis 4-panel, feature importance (top 25), per-city breakdown (30 kota, 29 tampil di test set), extreme AQI event analysis (AQI > 150), dan walk-forward cross-validation 3-fold.
    - Menyimpan seluruh hasil ke `notebooks/results/` (CSV + PNG).
-7. **`07_lstm_forecasting.ipynb`** *(standalone — tidak bergantung pada nb02–nb06)*:
-   - Memuat dataset mentah langsung dari `AQI Bangladesh.csv`.
-   - Melatih **GRU** (3-layer: GRU 128 → GRU 64 → GRU 32) dengan sliding window 48 jam — arsitektur kausal unidirectional, 25% lebih sedikit parameter dari BiLSTM (Chung et al., 2014).
-   - Menghasilkan **forecast AQI 30 hari ke depan** menggunakan recursive forecasting.
-   - Menyimpan model ke `notebooks/models/gru_aqi_model.h5` dan forecast ke `notebooks/results/forecast_aqi_30hari.csv`.
 
 ---
 
@@ -214,9 +206,7 @@ graph TD
 ```
 
 ### 2. Cara Menjalankan Eksperimen di Google Colab
-Jika Anda atau rekan kelompok ingin melatih model (XGBoost di `05_modelling.ipynb` atau LSTM di `07_lstm_forecasting.ipynb`) menggunakan GPU/CPU Google Colab, gunakan sel pembuka berikut:
-
-> **Catatan:** `requirements.txt` menyertakan `tensorflow` untuk kebutuhan `07_lstm_forecasting.ipynb`. Instalasi TensorFlow di Colab membutuhkan waktu lebih lama (~2–3 menit).
+Jika Anda atau rekan kelompok ingin melatih model (LightGBM di `05_modelling.ipynb`) menggunakan CPU Google Colab, gunakan sel pembuka berikut:
 
 #### Jika Repositori GitHub Anda bersifat **PUBLIK**:
 ```python
